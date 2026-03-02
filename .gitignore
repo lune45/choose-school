@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# Virtual env
+.venv/
+venv/
+backend/.venv/
+
+# Local database
+backend/app.db
+
+# IDE / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Env
+.env
+backend/.env

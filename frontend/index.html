@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>留学选校 AI 分析</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <main class="container">
+    <section class="hero">
+      <div>
+        <p class="kicker">Study Planner</p>
+        <h1>留学选校决策系统</h1>
+        <p class="hero-text">
+          支持国内手机号注册登录，按你的核心诉求动态加权，结合学校数据库和上传Excel，输出可下载PDF报告。
+        </p>
+      </div>
+    </section>
+
+    <section class="card" id="authCard">
+      <div class="tabs">
+        <button class="tab active" data-tab="register">注册</button>
+        <button class="tab" data-tab="login">登录</button>
+      </div>
+
+      <div id="registerPanel">
+        <h2>手机号注册</h2>
+        <div class="row">
+          <input id="regPhone" placeholder="11位手机号" />
+          <button id="sendRegCode">发送验证码</button>
+        </div>
+        <div class="row">
+          <input id="regCode" placeholder="验证码" />
+          <input id="regPassword" type="password" placeholder="设置密码（至少6位）" />
+        </div>
+        <button id="registerBtn" class="primary">注册并进入</button>
+      </div>
+
+      <div id="loginPanel" class="hidden">
+        <h2>登录</h2>
+        <div class="mode-switch">
+          <button id="pwdModeBtn" class="mini active">密码登录</button>
+          <button id="codeModeBtn" class="mini">验证码登录</button>
+        </div>
+
+        <div id="pwdLoginBox">
+          <div class="row">
+            <input id="loginPhonePwd" placeholder="11位手机号" />
+            <input id="loginPassword" type="password" placeholder="密码" />
+          </div>
+          <button id="loginPwdBtn" class="primary">登录</button>
+        </div>
+
+        <div id="codeLoginBox" class="hidden">
+          <div class="row">
+            <input id="loginPhoneCode" placeholder="11位手机号" />
+            <button id="sendLoginCode">发送验证码</button>
+          </div>
+          <div class="row">
+            <input id="loginCode" placeholder="验证码" />
+            <button id="loginCodeBtn" class="primary">验证码登录</button>
+          </div>
+        </div>
+      </div>
+
+      <p id="authTip" class="tip"></p>
+    </section>
+
+    <section class="card hidden" id="appCard">
+      <div class="topline">
+        <h2>择校分析</h2>
+        <button id="logoutBtn" class="mini danger">退出登录</button>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <label>留学地区</label>
+          <select id="countrySelect"></select>
+        </div>
+        <div>
+          <label>专业方向</label>
+          <input id="majorInput" value="CS" />
+        </div>
+      </div>
+
+      <div>
+        <label>预算上限（USD）</label>
+        <input id="budgetInput" type="number" value="70000" />
+      </div>
+
+      <div>
+        <label>最关注问题（可多选）</label>
+        <div id="dimensionBox" class="chips"></div>
+      </div>
+
+      <div class="school-header">
+        <h3>选校</h3>
+        <input id="schoolSearch" placeholder="搜索学校或项目" />
+      </div>
+
+      <div id="schoolList" class="school-list"></div>
+
+      <div class="row">
+        <input id="excelInput" type="file" accept=".xlsx,.xls" />
+        <button id="uploadExcelBtn">识别Excel选校</button>
+      </div>
+      <p id="excelTip" class="tip"></p>
+
+      <div>
+        <label>已选择</label>
+        <div id="selectedSummary" class="chips"></div>
+      </div>
+
+      <button id="runAnalysisBtn" class="primary">开始分析并生成报告</button>
+    </section>
+
+    <section class="card hidden" id="resultCard">
+      <h2>分析结果</h2>
+      <p id="modelTag" class="tip"></p>
+
+      <h3>权重配置</h3>
+      <div id="weightsBox" class="weights-grid"></div>
+
+      <h3>综合排名</h3>
+      <div class="table-wrap">
+        <table id="rankingTable">
+          <thead>
+            <tr>
+              <th>排名</th>
+              <th>院校</th>
+              <th>项目</th>
+              <th>总分</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <h3>AI总结</h3>
+      <pre id="summaryBox" class="summary"></pre>
+
+      <a id="pdfLink" class="primary link-btn" target="_blank">下载PDF报告</a>
+    </section>
+
+    <section class="card hidden" id="adminCard">
+      <div class="topline">
+        <h2>管理员后台</h2>
+        <span class="chip">仅管理员可见</span>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <label>筛选国家</label>
+          <input id="adminCountryFilter" placeholder="如：美国（留空=全部）" />
+        </div>
+        <div>
+          <label>关键词</label>
+          <input id="adminKeyword" placeholder="学校/项目/方向" />
+        </div>
+      </div>
+      <div class="row">
+        <button id="adminRefreshBtn">刷新列表</button>
+        <a id="adminTemplateLink" class="primary link-btn" href="#">下载导入模板</a>
+      </div>
+
+      <div class="row">
+        <input id="adminExcelInput" type="file" accept=".xlsx,.xls" />
+        <button id="adminImportBtn">批量导入Excel</button>
+      </div>
+      <p id="adminImportTip" class="tip"></p>
+
+      <div class="table-wrap">
+        <table id="adminTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>国家</th>
+              <th>院校</th>
+              <th>项目</th>
+              <th>学费</th>
+              <th>生活费</th>
+              <th>薪资中位数</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <h3 id="adminFormTitle">新增学校项目</h3>
+      <input id="adminEditId" type="hidden" />
+
+      <div class="grid-3">
+        <div><label>国家*</label><input id="fCountry" /></div>
+        <div><label>学校名*</label><input id="fSchoolName" /></div>
+        <div><label>项目名*</label><input id="fProgramName" /></div>
+        <div><label>方向</label><input id="fMajorTrack" value="CS" /></div>
+        <div><label>学位</label><input id="fDegree" value="Master" /></div>
+        <div><label>学费 USD</label><input id="fTuition" type="number" value="0" /></div>
+        <div><label>生活费 USD</label><input id="fLivingCost" type="number" value="0" /></div>
+        <div><label>排名分</label><input id="fRankingScore" type="number" value="0" /></div>
+        <div><label>薪资中位数 USD</label><input id="fMedianSalary" type="number" value="0" /></div>
+        <div><label>安全度</label><input id="fSafetyScore" type="number" value="0" /></div>
+        <div><label>课程难度</label><input id="fCourseDifficulty" type="number" value="0" /></div>
+        <div><label>就业支持</label><input id="fEmploymentSupport" type="number" value="0" /></div>
+        <div><label>工签支持</label><input id="fVisaSupport" type="number" value="0" /></div>
+        <div><label>校友网络</label><input id="fAlumniNetwork" type="number" value="0" /></div>
+        <div><label>移民友好</label><input id="fImmigrationFriendly" type="number" value="0" /></div>
+        <div><label>回国认可度</label><input id="fDomesticRecognition" type="number" value="0" /></div>
+      </div>
+      <div>
+        <label>备注</label>
+        <input id="fNotes" />
+      </div>
+
+      <div class="row">
+        <button id="adminSaveBtn" class="primary">保存</button>
+        <button id="adminResetBtn">重置表单</button>
+      </div>
+      <p id="adminTip" class="tip"></p>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
