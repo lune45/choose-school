@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     deepseek_api_base: str = "https://api.deepseek.com/v1"
     deepseek_api_key: str = ""
     deepseek_model: str = "deepseek-chat"
+    bing_api_key: str = ""  # 可选，空则跳过搜索
 
     otp_expire_minutes: int = 10
     otp_debug_return_code: bool = True

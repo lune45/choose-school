@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -128,15 +128,20 @@ class RankingItem(BaseModel):
 
 class AnalysisRunResponse(BaseModel):
     analysis_id: int
+    status: str
+    error_message: Optional[str] = None
     model_used: str
     weights: Dict[str, int]
     ranking: List[RankingItem]
     summary_markdown: str
+    result_json: Dict[str, Any]
     disclaimer: str
 
 
 class AnalysisRecordOut(BaseModel):
     id: int
+    status: str
+    error_message: Optional[str] = None
     country: str
     major: str
     budget_max: float
@@ -146,5 +151,6 @@ class AnalysisRecordOut(BaseModel):
     model_used: str
     ranking: List[RankingItem]
     summary_markdown: str
+    result_json: Dict[str, Any]
     disclaimer: str
     created_at: datetime

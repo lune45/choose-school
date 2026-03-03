@@ -69,8 +69,12 @@ class AnalysisRecord(Base):
     selected_school_ids: Mapped[list] = mapped_column(JSON)
     weights: Mapped[dict] = mapped_column(JSON)
 
-    model_used: Mapped[str] = mapped_column(String(64), default="rule-based")
+    status: Mapped[str] = mapped_column(String(32), default="completed", index=True)
+    error_message: Mapped[str] = mapped_column(Text, default="")
+    model_used: Mapped[str] = mapped_column(String(64), default="deepseek-chat")
     ai_summary_markdown: Mapped[str] = mapped_column(Text, default="")
+    result_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    raw_ai_response: Mapped[str] = mapped_column(Text, default="")
     ranking_table_json: Mapped[list] = mapped_column(JSON)
     disclaimer: Mapped[str] = mapped_column(Text)
 

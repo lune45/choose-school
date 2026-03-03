@@ -11,7 +11,43 @@
   <div class="bg-orb bg-orb-2"></div>
 
   <main class="container">
-    <section class="hero">
+    <section class="landing hidden" id="landingPage">
+      <nav class="landing-nav">
+        <div class="landing-brand">
+          <span class="landing-logo">SA</span>
+          <span>留学选校AI分析</span>
+        </div>
+        <button id="landingStartTopBtn" class="outline-btn" type="button">开始使用</button>
+      </nav>
+
+      <section class="landing-hero">
+        <h1>3分钟拿到你的专属留学选校报告</h1>
+        <p>AI深度分析就业、移民、成本、排名，帮你在Offer截止前做出最优决策</p>
+        <button id="landingStartBtn" class="primary" type="button">免费开始分析</button>
+      </section>
+
+      <section class="landing-features">
+        <article class="landing-feature-card">
+          <h3>📊 多维度量化评分</h3>
+          <p>就业薪资、H1B签证、学费成本等8大维度加权打分</p>
+        </article>
+        <article class="landing-feature-card">
+          <h3>🎯 个性化分析</h3>
+          <p>按你最关心的问题动态调整权重</p>
+        </article>
+        <article class="landing-feature-card">
+          <h3>📄 完整PDF报告</h3>
+          <p>详细对比报告一键下载</p>
+        </article>
+      </section>
+
+      <footer class="landing-footer">
+        <p>免责声明：本报告由AI基于公开数据生成，仅供参考，不构成录取、就业或移民保证，请结合最新官方信息决策。</p>
+        <p>© 2026 留学选校AI分析. All rights reserved.</p>
+      </footer>
+    </section>
+
+    <section class="hero" id="appHero">
       <div>
         <p class="kicker">Study Planner</p>
         <h1>留学选校决策系统</h1>
@@ -70,12 +106,27 @@
       <p id="authTip" class="tip"></p>
     </section>
 
-    <section class="card hidden" id="appCard">
-      <div class="topline">
-        <h2>择校分析</h2>
-        <button id="logoutBtn" class="mini danger">退出登录</button>
+    <section class="card hidden" id="appHomePage">
+      <div class="report-nav">
+        <button id="appBackLandingBtn" class="back-link-btn" type="button">← 返回首页</button>
       </div>
+      <div class="topline">
+        <h2>我的报告</h2>
+        <div class="home-actions">
+          <button id="newReportBtn" class="primary">新建报告</button>
+          <button id="logoutBtn" class="mini danger">退出登录</button>
+        </div>
+      </div>
+      <p class="tip">你可以从历史报告继续查看，或创建新的分析报告。</p>
+      <div id="historyList" class="history-list"></div>
+    </section>
 
+    <section class="card hidden" id="stepNewPage">
+      <div class="step-top">
+        <span>步骤 1 / 4</span>
+        <div class="step-progress"><span style="width:25%"></span></div>
+      </div>
+      <h2>基础信息</h2>
       <div class="grid-2">
         <div>
           <label>留学地区</label>
@@ -86,143 +137,95 @@
           <input id="majorInput" value="CS" />
         </div>
       </div>
-
       <div>
         <label>预算上限（USD）</label>
         <input id="budgetInput" type="number" value="70000" />
       </div>
+      <div class="step-actions">
+        <button id="step1BackBtn">返回</button>
+        <button id="step1NextBtn" class="primary">下一步</button>
+      </div>
+    </section>
 
+    <section class="card hidden" id="stepConcernsPage">
+      <div class="step-top">
+        <span>步骤 2 / 4</span>
+        <div class="step-progress"><span style="width:50%"></span></div>
+      </div>
+      <h2>关注点</h2>
       <div>
-        <label>最关注问题（可多选）</label>
+        <label>最关注问题（可多选，至少1项）</label>
         <div id="dimensionBox" class="chips"></div>
       </div>
+      <div class="step-actions">
+        <button id="step2BackBtn">上一步</button>
+        <button id="step2NextBtn" class="primary">下一步</button>
+      </div>
+    </section>
 
+    <section class="card hidden" id="stepSchoolsPage">
+      <div class="step-top">
+        <span>步骤 3 / 4</span>
+        <div class="step-progress"><span style="width:75%"></span></div>
+      </div>
+      <h2>选校</h2>
       <div class="school-header">
-        <h3>选校</h3>
+        <h3>内置院校列表（多选）</h3>
         <input id="schoolSearch" placeholder="搜索学校或项目" />
       </div>
-
       <div id="schoolList" class="school-list"></div>
-
       <div class="row">
         <input id="excelInput" type="file" accept=".xlsx,.xls" />
         <button id="uploadExcelBtn">识别Excel选校</button>
       </div>
       <p id="excelTip" class="tip"></p>
-
       <div>
         <label>已选择</label>
         <div id="selectedSummary" class="chips"></div>
       </div>
+      <div class="step-actions">
+        <button id="step3BackBtn">上一步</button>
+        <button id="step3NextBtn" class="primary">下一步</button>
+      </div>
+    </section>
 
-      <button id="runAnalysisBtn" class="primary">开始分析并生成报告</button>
+    <section class="card hidden" id="stepConfirmPage">
+      <div class="step-top">
+        <span>步骤 4 / 4</span>
+        <div class="step-progress"><span style="width:100%"></span></div>
+      </div>
+      <h2>确认清单</h2>
+      <div id="confirmSelectedList" class="confirm-list"></div>
+      <div class="step-actions">
+        <button id="step4BackBtn">上一步</button>
+        <button id="runAnalysisBtn" class="primary">开始分析</button>
+      </div>
     </section>
 
     <section class="card hidden" id="resultCard">
-      <h2>分析结果</h2>
-      <p id="modelTag" class="tip"></p>
-
-      <h3>权重配置</h3>
-      <div id="weightsBox" class="weights-grid"></div>
-
-      <h3>综合排名</h3>
-      <div class="table-wrap">
-        <table id="rankingTable">
-          <thead>
-            <tr>
-              <th>排名</th>
-              <th>院校</th>
-              <th>项目</th>
-              <th>总分</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+      <div class="report-nav">
+        <button id="reportBackHomeBtn" class="back-link-btn" type="button">← 返回主页</button>
       </div>
 
-      <h3>AI总结</h3>
-      <pre id="summaryBox" class="summary"></pre>
+      <div class="report-header">
+        <div>
+          <h2>分析报告</h2>
+          <p id="modelTag" class="tip"></p>
+        </div>
+        <button id="pdfLink" class="outline-btn hidden" type="button">下载PDF报告</button>
+      </div>
 
-      <a id="pdfLink" class="primary link-btn" target="_blank">下载PDF报告</a>
+      <div id="reportError" class="report-error hidden"></div>
+
+      <section id="executiveSummaryCard" class="report-exec hidden"></section>
+
+      <section id="schoolsCards" class="report-grid hidden"></section>
+
+      <section id="finalRecommendationCard" class="report-final hidden"></section>
+
+      <p id="reportDisclaimer" class="report-disclaimer hidden"></p>
     </section>
 
-    <section class="card hidden" id="adminCard">
-      <div class="topline">
-        <h2>管理员后台</h2>
-        <span class="chip">仅管理员可见</span>
-      </div>
-
-      <div class="grid-2">
-        <div>
-          <label>筛选国家</label>
-          <input id="adminCountryFilter" placeholder="如：美国（留空=全部）" />
-        </div>
-        <div>
-          <label>关键词</label>
-          <input id="adminKeyword" placeholder="学校/项目/方向" />
-        </div>
-      </div>
-      <div class="row">
-        <button id="adminRefreshBtn">刷新列表</button>
-        <a id="adminTemplateLink" class="primary link-btn" href="#">下载导入模板</a>
-      </div>
-
-      <div class="row">
-        <input id="adminExcelInput" type="file" accept=".xlsx,.xls" />
-        <button id="adminImportBtn">批量导入Excel</button>
-      </div>
-      <p id="adminImportTip" class="tip"></p>
-
-      <div class="table-wrap">
-        <table id="adminTable">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>国家</th>
-              <th>院校</th>
-              <th>项目</th>
-              <th>学费</th>
-              <th>生活费</th>
-              <th>薪资中位数</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <h3 id="adminFormTitle">新增学校项目</h3>
-      <input id="adminEditId" type="hidden" />
-
-      <div class="grid-3">
-        <div><label>国家*</label><input id="fCountry" /></div>
-        <div><label>学校名*</label><input id="fSchoolName" /></div>
-        <div><label>项目名*</label><input id="fProgramName" /></div>
-        <div><label>方向</label><input id="fMajorTrack" value="CS" /></div>
-        <div><label>学位</label><input id="fDegree" value="Master" /></div>
-        <div><label>学费 USD</label><input id="fTuition" type="number" value="0" /></div>
-        <div><label>生活费 USD</label><input id="fLivingCost" type="number" value="0" /></div>
-        <div><label>排名分</label><input id="fRankingScore" type="number" value="0" /></div>
-        <div><label>薪资中位数 USD</label><input id="fMedianSalary" type="number" value="0" /></div>
-        <div><label>安全度</label><input id="fSafetyScore" type="number" value="0" /></div>
-        <div><label>课程难度</label><input id="fCourseDifficulty" type="number" value="0" /></div>
-        <div><label>就业支持</label><input id="fEmploymentSupport" type="number" value="0" /></div>
-        <div><label>工签支持</label><input id="fVisaSupport" type="number" value="0" /></div>
-        <div><label>校友网络</label><input id="fAlumniNetwork" type="number" value="0" /></div>
-        <div><label>移民友好</label><input id="fImmigrationFriendly" type="number" value="0" /></div>
-        <div><label>回国认可度</label><input id="fDomesticRecognition" type="number" value="0" /></div>
-      </div>
-      <div>
-        <label>备注</label>
-        <input id="fNotes" />
-      </div>
-
-      <div class="row">
-        <button id="adminSaveBtn" class="primary">保存</button>
-        <button id="adminResetBtn">重置表单</button>
-      </div>
-      <p id="adminTip" class="tip"></p>
-    </section>
   </main>
 
   <script src="/static/app.js"></script>

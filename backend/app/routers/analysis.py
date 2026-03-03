@@ -1,14 +1,18 @@
 from io import BytesIO
+import json
+from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from ..config import get_settings
 from ..database import get_db
 from ..models import AnalysisRecord, SchoolProgram, User
 from ..schemas import AnalysisRecordOut, AnalysisRunRequest, AnalysisRunResponse, RankingItem
 from ..security import get_current_user
-from ..services.deepseek import DISCLAIMER, build_prompt, generate_analysis
+from ..services.ai_client import generate_report, result_json_to_markdown
+from ..services.deepseek import DISCLAIMER, build_prompt
 from ..services.pdf_report import render_pdf
 from ..services.scoring import rank_programs
 from ..services.weights import calc_weights
@@ -39,26 +43,16 @@ def _program_to_dict(p: SchoolProgram) -> dict:
     }
 
 
-def _rule_based_summary(ranking: list[dict], dimensions: list[str], note: str) -> str:
-    if not ranking:
-        return "未选择学校，无法生成建议。"
-    top = ranking[0]
-    second = ranking[1] if len(ranking) > 1 else None
-    cheapest = max(ranking, key=lambda x: x["metrics"]["成本"])  # 成本分越高越省钱
-
-    lines = [
-        "## 最终建议（规则评分）",
-        f"首选 {top['school']} · {top['program']}，综合分 {top['total_score']}。",
-    ]
-    if second:
-        lines.append(f"备选 {second['school']} · {second['program']}，综合分 {second['total_score']}。")
-    lines.append(
-        f"如果预算压力较大，可优先考虑 {cheapest['school']} · {cheapest['program']}（成本维度更优）。"
-    )
-    lines.append(f"重点关注维度：{'、'.join(dimensions)}。")
-    lines.append(note)
-    lines.append(DISCLAIMER)
-    return "\n\n".join(lines)
+def _coerce_result_json(value: Any) -> Dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+            return parsed if isinstance(parsed, dict) else {}
+        except json.JSONDecodeError:
+            return {}
+    return {}
 
 
 @router.post("/run", response_model=AnalysisRunResponse)
@@ -91,11 +85,33 @@ async def run_analysis(
         schools_json=schools_json,
     )
 
-    model_used, summary_markdown = await generate_analysis(prompt)
-    if model_used == "rule-based":
-        summary_markdown = _rule_based_summary(ranking, payload.selected_dimensions, summary_markdown)
-    elif DISCLAIMER not in summary_markdown:
-        summary_markdown = summary_markdown + "\n\n" + DISCLAIMER
+    settings = get_settings()
+    status = "completed"
+    error_message = ""
+    model_used = settings.deepseek_model
+    summary_markdown = ""
+    result_json: Dict[str, Any] = {}
+    raw_ai_response = ""
+    ranking_to_save = ranking
+    ranking_to_return = [RankingItem(**r) for r in ranking]
+
+    try:
+        model_used, result_json, raw_ai_response = await generate_report(
+            prompt=prompt,
+            schools_json=schools_json,
+            selected_dimensions=payload.selected_dimensions,
+        )
+        summary_markdown = result_json_to_markdown(result_json)
+        if DISCLAIMER not in summary_markdown:
+            summary_markdown = summary_markdown + "\n\n" + DISCLAIMER
+    except Exception as exc:
+        status = "failed"
+        error_message = str(exc)
+        summary_markdown = ""
+        result_json = {}
+        raw_ai_response = ""
+        ranking_to_save = []
+        ranking_to_return = []
 
     record = AnalysisRecord(
         user_id=current_user.id,
@@ -105,9 +121,13 @@ async def run_analysis(
         selected_dimensions=payload.selected_dimensions,
         selected_school_ids=payload.school_ids,
         weights=weights,
+        status=status,
+        error_message=error_message,
         model_used=model_used,
         ai_summary_markdown=summary_markdown,
-        ranking_table_json=ranking,
+        result_json=result_json,
+        raw_ai_response=raw_ai_response,
+        ranking_table_json=ranking_to_save,
         disclaimer=DISCLAIMER,
     )
     db.add(record)
@@ -116,10 +136,13 @@ async def run_analysis(
 
     return AnalysisRunResponse(
         analysis_id=record.id,
+        status=status,
+        error_message=error_message or None,
         model_used=model_used,
         weights=weights,
-        ranking=[RankingItem(**r) for r in ranking],
+        ranking=ranking_to_return,
         summary_markdown=summary_markdown,
+        result_json=result_json,
         disclaimer=DISCLAIMER,
     )
 
@@ -137,9 +160,13 @@ def get_analysis(
     )
     if not row:
         raise HTTPException(status_code=404, detail="分析记录不存在")
+    ranking = row.ranking_table_json if isinstance(row.ranking_table_json, list) else []
+    result_json = _coerce_result_json(row.result_json)
 
     return AnalysisRecordOut(
         id=row.id,
+        status=row.status,
+        error_message=row.error_message or None,
         country=row.country,
         major=row.major,
         budget_max=row.budget_max,
@@ -147,8 +174,9 @@ def get_analysis(
         selected_school_ids=row.selected_school_ids,
         weights=row.weights,
         model_used=row.model_used,
-        ranking=[RankingItem(**r) for r in row.ranking_table_json],
+        ranking=[RankingItem(**r) for r in ranking],
         summary_markdown=row.ai_summary_markdown,
+        result_json=result_json,
         disclaimer=row.disclaimer,
         created_at=row.created_at,
     )
@@ -167,6 +195,8 @@ def download_pdf(
     )
     if not row:
         raise HTTPException(status_code=404, detail="分析记录不存在")
+    if row.status == "failed":
+        raise HTTPException(status_code=400, detail="报告生成失败，无法下载PDF")
 
     ranking = row.ranking_table_json if isinstance(row.ranking_table_json, list) else []
     pdf_bytes = render_pdf(
