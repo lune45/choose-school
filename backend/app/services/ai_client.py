@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import re
@@ -11,6 +12,7 @@ import httpx
 
 from ..config import get_settings
 from .deepseek import DISCLAIMER
+from .query_schema import compose_query_output, enforce_country_specific_dash, get_query_output_schema
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +38,7 @@ DETAILED_OUTPUT_REQUIREMENTS = f"""
    - 就业前景：100字以上，必须包含具体公司名称、薪资区间、就业路径。
    - 就读体验：80字以上，描述课程强度、华人比例、城市生活感受。
    - 行动建议：3条具体建议，例如“建议入学前完成LeetCode 200题”。
+   - query_output：必须输出标准化查询字段对象；所有key都要有值，不适用或缺失写"-"。
 4. 除新增字段外，不要改已有字段名，不要删除已有字段。
 """
 
@@ -96,9 +99,42 @@ def _safe_score(value: Any, fallback: int = 70) -> int:
     return max(0, min(100, int(score)))
 
 
+def _build_query_output_map(schools_json: List[Dict[str, Any]]) -> Dict[str, Dict[str, str]]:
+    mapping: Dict[str, Dict[str, str]] = {}
+    for item in schools_json:
+        if not isinstance(item, dict):
+            continue
+        school_name = _to_text(item.get("school_name"))
+        program_name = _to_text(item.get("program_name"))
+        if not school_name or not program_name:
+            continue
+        raw_query_output = item.get("query_output") if isinstance(item.get("query_output"), dict) else {}
+        merged = compose_query_output(item, raw_query_output)
+        mapping[f"{school_name}::{program_name}"] = merged
+    return mapping
+
+
+def _normalize_query_output(
+    value: Any,
+    fallback_query_output: Dict[str, str],
+) -> Dict[str, str]:
+    normalized = {k: (_to_text(v) or "-") for k, v in fallback_query_output.items()}
+    incoming = value if isinstance(value, dict) else {}
+    for key, raw_value in incoming.items():
+        text = _to_text(raw_value)
+        normalized[_to_text(key)] = text if text else "-"
+    for key, raw_value in normalized.items():
+        if _to_text(raw_value) in {"", "0", "0.0", "None", "null", "N/A", "n/a"}:
+            normalized[key] = "-"
+    return enforce_country_specific_dash(normalized)
+
+
 def _default_school_cards(schools_json: List[Dict[str, Any]], selected_dimensions: List[str]) -> List[Dict[str, Any]]:
     cards: List[Dict[str, Any]] = []
     for item in schools_json:
+        fallback_query_output = compose_query_output(item if isinstance(item, dict) else {}, {})
+        raw_query_output = item.get("query_output") if isinstance(item, dict) and isinstance(item.get("query_output"), dict) else {}
+        query_output = _normalize_query_output(raw_query_output, fallback_query_output)
         cards.append(
             {
                 "school_name": _to_text(item.get("school_name")) or "未知院校",
@@ -111,6 +147,7 @@ def _default_school_cards(schools_json: List[Dict[str, Any]], selected_dimension
                     "核对最新官方课程与学费信息。",
                     "结合个人预算和就业目标进行优先级排序。",
                 ],
+                "query_output": query_output,
             }
         )
     return cards
@@ -123,6 +160,8 @@ def normalize_report_json(
 ) -> Dict[str, Any]:
     data = parsed if isinstance(parsed, dict) else {}
     defaults = _default_school_cards(schools_json, selected_dimensions)
+    query_output_map = _build_query_output_map(schools_json)
+    query_output_schema = get_query_output_schema()
 
     raw_ranking = data.get("comprehensive_ranking") if isinstance(data.get("comprehensive_ranking"), list) else []
     raw_assessments = (
@@ -202,6 +241,7 @@ def normalize_report_json(
         ) or fallback["program_name"]
 
         ranking_info = ranking_info_map.get(f"{school_name}::{program_name}", {})
+        fallback_query_output = query_output_map.get(f"{school_name}::{program_name}", {})
         ranking_breakdown = (
             ranking_info.get("score_breakdown")
             if isinstance(ranking_info.get("score_breakdown"), dict)
@@ -240,6 +280,7 @@ def normalize_report_json(
             "结合预算与就业目标制定申请优先级。",
         ]
         evidence_used = _to_list(row.get("evidence_used") or row.get("evidence"))
+        query_output = _normalize_query_output(row.get("query_output"), fallback_query_output)
 
         school_obj = {
             "school_name": school_name,
@@ -254,6 +295,7 @@ def normalize_report_json(
             "就业前景": outlook,
             "recommended_actions": actions,
             "evidence_used": evidence_used,
+            "query_output": query_output,
             "score_breakdown": merged_breakdown,
             "就业薪资": merged_breakdown.get("就业薪资", ""),
             "学校排名": merged_breakdown.get("学校排名", ""),
@@ -279,6 +321,7 @@ def normalize_report_json(
                 "experience": experience,
                 "recommended_actions": actions,
                 "evidence_used": evidence_used,
+                "query_output": query_output,
             }
         )
 
@@ -307,6 +350,7 @@ def normalize_report_json(
         "comprehensive_ranking": normalized_ranking,
         "school_assessments": normalized_assessments,
         "schools": normalized_schools,
+        "query_output_schema": query_output_schema,
         "final_recommendation": final_recommendation,
         "disclaimer": disclaimer,
     }
@@ -367,20 +411,79 @@ async def generate_report(
     if not settings.deepseek_api_key:
         raise RuntimeError("DEEPSEEK_API_KEY 未配置，无法生成AI分析")
 
-    # 如果配置了Bing key，先搜索就读体验
-    experience_context = ""
-    if settings.bing_api_key:
+    def _save_pending_search_insights(records: List[Dict[str, Any]]) -> None:
+        if not records:
+            return
         try:
-            from .search import batch_search_schools
-
-            exp_map = await batch_search_schools(schools_json, settings.bing_api_key)
-            lines = []
-            for school_name, text in exp_map.items():
-                if text:
-                    lines.append(f"【{school_name}真实就读反馈（来自网络）】\n{text}")
-            experience_context = "\n\n".join(lines)
+            from ..database import SessionLocal
+            from ..models import SchoolSearchInsight
         except Exception as exc:
-            logger.warning("bing_search skipped due to error=%s", repr(exc))
+            logger.warning("save_pending_search_insights import failed error=%s", repr(exc))
+            return
+
+        with SessionLocal() as db:
+            created = 0
+            for record in records:
+                summary_text = _to_text(record.get("summary_text"))
+                school_name = _to_text(record.get("school_name"))
+                if not summary_text or not school_name:
+                    continue
+
+                school_program_id = record.get("school_id")
+                content_hash = hashlib.sha256(summary_text.encode("utf-8")).hexdigest()
+                exists = (
+                    db.query(SchoolSearchInsight)
+                    .filter(
+                        SchoolSearchInsight.school_program_id == school_program_id,
+                        SchoolSearchInsight.school_name == school_name,
+                        SchoolSearchInsight.status == "pending",
+                    )
+                    .all()
+                )
+                duplicated = any(
+                    hashlib.sha256(_to_text(x.raw_text).encode("utf-8")).hexdigest() == content_hash
+                    for x in exists
+                )
+                if duplicated:
+                    continue
+
+                db.add(
+                    SchoolSearchInsight(
+                        school_program_id=school_program_id,
+                        school_name=school_name,
+                        program_name=_to_text(record.get("program_name")),
+                        source_provider=_to_text(record.get("provider")) or "web-search",
+                        raw_text=summary_text,
+                        search_payload={
+                            "items": record.get("items", []),
+                            "query_count": len(record.get("items", []) or []),
+                        },
+                        status="pending",
+                    )
+                )
+                created += 1
+            if created:
+                db.commit()
+
+    # 如果配置了联网搜索提供商，先搜索就读体验
+    experience_context = ""
+    try:
+        from .search import batch_search_school_records, web_search_enabled
+
+        if web_search_enabled():
+            records = await batch_search_school_records(schools_json)
+            lines = []
+            for row in records:
+                school_name = _to_text(row.get("school_name"))
+                program_name = _to_text(row.get("program_name"))
+                text = _to_text(row.get("summary_text"))
+                if text:
+                    title = f"{school_name} · {program_name}" if program_name else school_name
+                    lines.append(f"【{title}真实就读反馈（来自网络）】\n{text}")
+            experience_context = "\n\n".join(lines)
+            _save_pending_search_insights(records)
+    except Exception as exc:
+        logger.warning("web_search skipped due to error=%s", repr(exc))
 
     if experience_context:
         prompt += f"\n\n【联网搜索到的就读体验（仅供参考，请甄别真实性）】\n{experience_context}"

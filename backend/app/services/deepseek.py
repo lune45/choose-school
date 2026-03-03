@@ -9,6 +9,7 @@ from typing import Dict, List, Tuple
 import httpx
 
 from ..config import get_settings
+from .query_schema import query_schema_prompt_text
 
 logger = logging.getLogger(__name__)
 DISCLAIMER = "本报告由AI基于公开数据生成，仅供参考，不构成录取、就业或移民保证，请结合最新官方信息决策。"
@@ -28,6 +29,7 @@ def build_prompt(
     selected_names = "\n".join(
         [f"- {x['school_name']} · {x['program_name']}" for x in schools_json]
     )
+    query_schema_text = query_schema_prompt_text()
 
     return f"""你是专注{country} {major}硕士留学的专业规划师，以{primary}为核心评估标准。
 
@@ -48,6 +50,10 @@ def build_prompt(
 - 所有维度加权分之和 = fit_score（总分，0-100）
 - 数据库字段为0或null时，基于你的知识估算，并在evidence_used中标注"估算"
 - 不要机械套用数据库数字，要结合实际就业市场判断
+- 对于签证政策不适用场景必须明确填"-"（例如澳洲项目的OPT/H1B字段）
+
+【标准化查询输出字段（所有学校都必须输出，缺失或不适用填"-"）】
+{query_schema_text}
 
 【严格只评估以下学校，不评估清单外的学校】
 {selected_names}
@@ -108,6 +114,23 @@ JSON结构如下：
         "行动建议二：...",
         "行动建议三：..."
       ],
+
+      "query_output": {{
+        "country": "目标国家/地区",
+        "school_name_en": "学校英文全称",
+        "program_name": "项目全称",
+        "degree_type": "学位类型",
+        "duration_months": "项目时长(月)",
+        "post_study_work": "毕业工签名称与年限",
+        "pr_pathway": "PR路径评估",
+        "stem_eligible": "-",
+        "h1b_sponsor_rate_pct": "-",
+        "au_485_years": "-",
+        "ca_pgwp_eligible": "-",
+        "hk_iang_eligible": "-",
+        "sg_ep_difficulty": "-",
+        "policy_last_checked": "YYYY-MM-DD"
+      }},
       
       "evidence_used": ["列出你用到的数据字段或标注'估算'的项目"]
     }}
@@ -123,6 +146,7 @@ JSON结构如下：
 - 短板必须说明对用户的实际影响，不接受"成本较高"这种废话
 - concern_analysis必须针对用户选的{dimensions}深度展开
 - 如果数据库某字段为0或缺失，结合行业知识估算，在evidence_used中标注(估算)
+- query_output 必须包含完整字段清单中的所有key；不确定或不适用统一填"-"
 """
 
 

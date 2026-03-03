@@ -39,6 +39,12 @@ class SchoolProgram(Base):
     program_name: Mapped[str] = mapped_column(String(255))
     major_track: Mapped[str] = mapped_column(String(64), default="CS")
     degree: Mapped[str] = mapped_column(String(64), default="Master")
+    qs_rank: Mapped[float] = mapped_column(Float, default=0)
+    usnews_rank: Mapped[float] = mapped_column(Float, default=0)
+    times_rank: Mapped[float] = mapped_column(Float, default=0)
+    program_duration_months: Mapped[float] = mapped_column(Float, default=0)
+    course_list_json: Mapped[list] = mapped_column(JSON, default=list)
+    query_output_json: Mapped[dict] = mapped_column(JSON, default=dict)
 
     tuition_usd: Mapped[float] = mapped_column(Float, default=0)
     living_cost_usd: Mapped[float] = mapped_column(Float, default=0)
@@ -68,6 +74,8 @@ class AnalysisRecord(Base):
     selected_dimensions: Mapped[list] = mapped_column(JSON)
     selected_school_ids: Mapped[list] = mapped_column(JSON)
     weights: Mapped[dict] = mapped_column(JSON)
+    concerns_json: Mapped[list] = mapped_column(JSON, default=list)
+    weights_json: Mapped[dict] = mapped_column(JSON, default=dict)
 
     status: Mapped[str] = mapped_column(String(32), default="completed", index=True)
     error_message: Mapped[str] = mapped_column(Text, default="")
@@ -81,3 +89,21 @@ class AnalysisRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     user = relationship("User", back_populates="analyses")
+
+
+class SchoolSearchInsight(Base):
+    __tablename__ = "school_search_insights"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    school_program_id: Mapped[int | None] = mapped_column(ForeignKey("school_programs.id"), index=True, nullable=True)
+    school_name: Mapped[str] = mapped_column(String(255), index=True)
+    program_name: Mapped[str] = mapped_column(String(255), default="")
+    source_provider: Mapped[str] = mapped_column(String(64), default="bing")
+    raw_text: Mapped[str] = mapped_column(Text)
+    edited_text: Mapped[str] = mapped_column(Text, default="")
+    search_payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
+    review_note: Mapped[str] = mapped_column(Text, default="")
+    reviewed_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

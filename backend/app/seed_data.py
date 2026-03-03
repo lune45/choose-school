@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 
 from .models import SchoolProgram
+from .services.query_schema import compose_query_output
 
 SEED_SCHOOLS = [
     {
@@ -156,5 +157,7 @@ def seed_schools(db: Session) -> None:
         return
 
     for row in SEED_SCHOOLS:
-        db.add(SchoolProgram(**row))
+        payload = dict(row)
+        payload["query_output_json"] = compose_query_output(payload, payload.get("query_output_json") or {})
+        db.add(SchoolProgram(**payload))
     db.commit()

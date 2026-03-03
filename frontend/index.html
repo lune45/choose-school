@@ -11,6 +11,17 @@
   <div class="bg-orb bg-orb-2"></div>
 
   <main class="container">
+    <nav id="globalTopNav" class="global-top-nav hidden">
+      <div class="global-top-left">
+        <button id="topNavSchoolBtn" class="mini" type="button">学校名单</button>
+        <button id="topNavAdviceBtn" class="mini" type="button">选校建议</button>
+        <button id="topNavAdminBtn" class="mini hidden" type="button">管理员页面</button>
+      </div>
+      <div class="global-top-right">
+        <span id="topNavUserRole" class="top-role-tag hidden"></span>
+      </div>
+    </nav>
+
     <section class="landing hidden" id="landingPage">
       <nav class="landing-nav">
         <div class="landing-brand">
@@ -121,6 +132,156 @@
       <div id="historyList" class="history-list"></div>
     </section>
 
+    <section class="card hidden" id="schoolCatalogPage">
+      <div class="topline">
+        <h2>学校名单</h2>
+        <button id="catalogBackHomeBtn" class="mini" type="button">返回选校建议</button>
+      </div>
+      <p class="tip">按不同排名方式浏览学校，点击学校查看项目列表，再点击项目查看详细信息。</p>
+      <div class="catalog-rank-switch">
+        <button id="catalogRankQsBtn" class="mini active" type="button">QS</button>
+        <button id="catalogRankUsnewsBtn" class="mini" type="button">USNews</button>
+        <button id="catalogRankTimesBtn" class="mini" type="button">泰晤士</button>
+      </div>
+      <p id="catalogCountTip" class="tip"></p>
+      <div class="row">
+        <input id="catalogSearchInput" placeholder="搜索学校或项目" />
+      </div>
+      <div id="catalogList" class="school-list"></div>
+    </section>
+
+    <section class="card hidden" id="schoolDetailPage">
+      <div class="topline">
+        <h2 id="schoolDetailTitle">学校详情</h2>
+        <button id="schoolDetailBackBtn" class="mini" type="button">返回学校名单</button>
+      </div>
+      <div id="schoolDetailRankings" class="catalog-rankings"></div>
+      <p id="schoolDetailMeta" class="tip"></p>
+      <div id="schoolDetailPrograms" class="school-list"></div>
+    </section>
+
+    <section class="card hidden" id="programDetailPage">
+      <div class="topline">
+        <h2 id="programDetailTitle">项目详情</h2>
+        <button id="programDetailBackBtn" class="mini" type="button">返回学校详情</button>
+      </div>
+      <div id="programDetailMeta" class="catalog-rankings"></div>
+      <div class="admin-insight-summary-box">
+        <h5>选课列表清单</h5>
+        <ul id="programDetailCourses" class="admin-course-list"></ul>
+      </div>
+      <div class="admin-insight-summary-box" style="margin-top:10px;">
+        <h5>备注信息</h5>
+        <p id="programDetailNotes" class="tip"></p>
+      </div>
+    </section>
+
+    <section class="card hidden" id="adminPage">
+      <div class="topline">
+        <h2>管理员后台</h2>
+        <button id="adminBackHomeBtn" class="mini" type="button">返回建议页</button>
+      </div>
+      <p class="tip">审批AI联网检索的新资料，确认后再入库，降低错误信息风险。</p>
+
+      <section class="admin-assistant">
+        <div class="topline">
+          <h3>AI数据库检索员</h3>
+        </div>
+        <p class="tip">每次进入管理员页可直接继续检索并生成待审批资料，所有候选信息都附来源链接。</p>
+        <div class="row">
+          <input id="adminRagCountryInput" placeholder="可选：国家（如 美国）" />
+          <input id="adminRagMajorInput" placeholder="可选：方向（如 CS）" />
+        </div>
+        <div class="admin-quick-actions">
+          <button id="adminQuickSearch5Btn" class="mini primary" type="button">继续搜索入库5个学校信息</button>
+          <button id="adminQuickSearch10Btn" class="mini" type="button">继续搜索入库10个学校信息</button>
+          <button id="adminQuickMemoryBtn" class="mini" type="button">查看今日记忆</button>
+        </div>
+        <div id="adminChatMessages" class="admin-chat-messages"></div>
+        <div class="row">
+          <input id="adminChatInput" placeholder="给数据库检索员下达指令，例如：先搜英国CS项目" />
+          <button id="adminChatSendBtn" class="mini" type="button">发送</button>
+        </div>
+        <section class="admin-memory-board">
+          <div class="topline">
+            <h4>记忆看板</h4>
+            <button id="adminMemoryRefreshBtn" class="mini" type="button">刷新记忆</button>
+          </div>
+          <div id="adminMemoryStats" class="admin-memory-stats"></div>
+          <div id="adminMemoryLongTerm" class="admin-memory-longterm"></div>
+          <p id="adminMemoryMeta" class="tip"></p>
+          <div id="adminMemoryRetryList" class="admin-memory-list"></div>
+          <details class="admin-memory-editor-wrap">
+            <summary>高级编辑：memory.md</summary>
+            <textarea id="adminMemoryEditor" class="admin-insight-edit admin-memory-editor"></textarea>
+            <div class="admin-quick-actions">
+              <button id="adminMemorySaveBtn" class="mini" type="button">保存记忆</button>
+            </div>
+          </details>
+          <p id="adminMemoryTip" class="tip"></p>
+        </section>
+      </section>
+
+      <div class="admin-tabs">
+        <button id="adminTabSchoolsBtn" class="tab active" type="button">学校数据</button>
+        <button id="adminTabInsightsBtn" class="tab" type="button">新资料审批</button>
+      </div>
+
+      <section id="adminSchoolsPanel">
+        <div class="admin-toolbar">
+          <div class="row">
+            <input id="adminSchoolQuery" placeholder="搜索学校/项目" />
+            <button id="adminSchoolRefreshBtn" class="mini" type="button">刷新列表</button>
+          </div>
+          <div class="row">
+            <input id="adminExcelInput" type="file" accept=".xlsx,.xls" />
+            <button id="adminImportBtn" class="mini" type="button">导入Excel</button>
+          </div>
+          <div class="row">
+            <button id="adminDownloadTemplateBtn" class="mini" type="button">下载导入模板</button>
+            <span id="adminSchoolTip" class="tip"></span>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>国家</th>
+                <th>学校</th>
+                <th>项目</th>
+                <th>时长(月)</th>
+                <th>课程数</th>
+                <th>学费</th>
+                <th>生活费</th>
+                <th>薪资中位数</th>
+              </tr>
+            </thead>
+            <tbody id="adminSchoolsTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="adminInsightsPanel" class="hidden">
+        <div class="admin-toolbar">
+          <div class="row">
+            <select id="adminInsightStatus">
+              <option value="pending">待审批</option>
+              <option value="approved">已通过</option>
+              <option value="rejected">已否决</option>
+              <option value="all">全部</option>
+            </select>
+            <input id="adminInsightQuery" placeholder="搜索学校、项目或内容" />
+          </div>
+          <div class="row">
+            <button id="adminInsightRefreshBtn" class="mini" type="button">刷新审批队列</button>
+            <span id="adminInsightTip" class="tip"></span>
+          </div>
+        </div>
+        <div id="adminInsightsList" class="admin-insights-list"></div>
+      </section>
+    </section>
+
     <section class="card hidden" id="stepNewPage">
       <div class="step-top">
         <span>步骤 1 / 4</span>
@@ -152,14 +313,32 @@
         <span>步骤 2 / 4</span>
         <div class="step-progress"><span style="width:50%"></span></div>
       </div>
-      <h2>关注点</h2>
-      <div>
-        <label>最关注问题（可多选，至少1项）</label>
-        <div id="dimensionBox" class="chips"></div>
+
+      <div id="concernSelectStage" class="concern-stage">
+        <div class="topline concern-stage-head">
+          <h2>选择关注维度</h2>
+          <span class="concern-stage-tag">阶段 1 / 2</span>
+        </div>
+        <p class="tip">请先选择你最关心的维度（最少2个，最多6个）。</p>
+        <div id="dimensionCardGrid" class="dimension-grid"></div>
+        <p id="dimensionSelectHint" class="tip"></p>
+        <div class="step-actions">
+          <button id="step2BackBtn">上一步</button>
+          <button id="step2ToSortBtn" class="primary">下一步：排列优先级 →</button>
+        </div>
       </div>
-      <div class="step-actions">
-        <button id="step2BackBtn">上一步</button>
-        <button id="step2NextBtn" class="primary">下一步</button>
+
+      <div id="concernSortStage" class="concern-stage concern-stage-collapsed">
+        <div class="topline concern-stage-head">
+          <h2>把选中的维度按重要程度排序（拖拽调整顺序）</h2>
+          <span class="concern-stage-tag">阶段 2 / 2</span>
+        </div>
+        <p class="tip">第1位权重最高，影响最终评分。</p>
+        <div id="dimensionSortList" class="dimension-sort-list"></div>
+        <div class="step-actions">
+          <button id="concernBackSelectBtn">← 重新选择</button>
+          <button id="step2NextBtn" class="primary">确认，下一步 →</button>
+        </div>
       </div>
     </section>
 
